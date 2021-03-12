@@ -1,0 +1,1 @@
+In terms of specific design content, in order to reduce the storage pressure on the chain, we innovativelt transform the storage mode of the blockchain from a single on-chain storage to a hybrid on- and off-chain storage mode, and we design a distributed semantic extraction algrithm which establishes the mapping relationship between on- and off-chain data.
