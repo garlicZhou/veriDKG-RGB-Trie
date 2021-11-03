@@ -1,1 +1,1 @@
-# dissert
+# A verifiable knowledge graph
