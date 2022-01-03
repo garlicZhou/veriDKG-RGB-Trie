@@ -35,6 +35,11 @@ type RGBtrie struct {
 	DB leveldb.DB
 }
 
+type proof struct {
+	result []tripleItem
+	merkleProof [][32]byte
+}
+
 func new(db *leveldb.DB) *RGBtrie {
     rgbtrie := &RGBtrie{
 		Root: &node{isExtend: false, isLeaf: false, color: 0},
@@ -274,19 +279,20 @@ func (t *RGBtrie) searchTrie(word []byte) []tripleItem {
 	return []tripleItem{}
 }
 
-func (node1 *node) searchNode(word []byte) (result []tripleItem) {
+func (node1 *node) searchNode(word []byte, prf proof) (result proof) {
 	if node1.isLeaf {
 		if len(node1.key) != len(word) {
-			return []tripleItem{}
+			return proof{}
 		} else {
 			for i, j := range node1.key {
 				if word[i] == j {
 					continue
 				} else {
-					return []tripleItem{}
+					return proof{}
 				}
 			}
-			return node1.value
+			prf.result = node1.value
+			return prf
 		}
 	} else if node1.isExtend {
 		if len(node1.key) == len(word) {
@@ -334,6 +340,10 @@ func (node1 *node) searchNode(word []byte) (result []tripleItem) {
 }
 
 func (t *RGBtrie) getProof() {
+
+}
+
+func (t *RGBtrie) verifyProof() {
 
 }
 
