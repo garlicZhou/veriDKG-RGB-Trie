@@ -20,9 +20,9 @@ func TestStorage(t *testing.T) {
 
 	defer db.Close()
 
-	rgbtrie := new(db)
+	rgbtrie := newTrie(db)
 
-	fi, err := os.Open("c:/Users/85261/Desktop/1.txt")
+	fi, err := os.Open("C:\\Users\\21038299r\\Desktop\\COMP\\my paper\\SIGIR\\experiment\\1.txt")
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
 		return
@@ -32,7 +32,7 @@ func TestStorage(t *testing.T) {
 	br := bufio.NewReader(fi)
 	i := 0
 	for {
-		if i > 100{
+		if i > 1000 {
 			//rgbtrie.searchTrie()
 			break
 		}
@@ -81,11 +81,13 @@ func TestStorage(t *testing.T) {
 		rgbtrie.searchTrie(strHash2)
 	}
 	//rgbtrie.printTrie()
-	fmt.Println("query result:", rgbtrie.searchTrie(strHash2))
+	p, q := rgbtrie.searchTrie(strHash2)
+	fmt.Println("query result:", p, q)
 	elapsed := time.Since(t1)
 	fmt.Println("Query time:", elapsed.Nanoseconds())
-	//db.Put(rgbtrie.RootHash, rgbtrie_data,nil)
 
+	fmt.Println("the result of veriy:", rgbtrie.verifyProof(p, q))
+	//db.Put(rgbtrie.RootHash, rgbtrie_data,nil)
 
 	/*db.Put([]byte("key1"), []byte("value1"), nil)
 	db.Put([]byte("key2"), []byte("value2"), nil)

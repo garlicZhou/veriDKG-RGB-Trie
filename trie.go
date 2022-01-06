@@ -16,7 +16,7 @@ type node struct {
 	hash      [32]byte
 	isLeaf    bool
 	isExtend  bool
-    color     int8  //1:s, 2:p, 4:o, 3:sp, 5:so, 6:po, 7:spo
+	color     int8 //1:s, 2:p, 4:o, 3:sp, 5:so, 6:po, 7:spo
 }
 
 type nodekv struct {
@@ -30,20 +30,20 @@ type nodekv struct {
 }
 
 type RGBtrie struct {
-	Root *node
-    RootHash [32]byte
-	DB leveldb.DB
+	Root     *node
+	RootHash [32]byte
+	DB       leveldb.DB
 }
 
 type proof struct {
-	result []tripleItem
-	merkleProof [][32]byte
+	result      []tripleItem
+	merkleProof [][][32]byte
 }
 
-func new(db *leveldb.DB) *RGBtrie {
-    rgbtrie := &RGBtrie{
+func newTrie(db *leveldb.DB) *RGBtrie {
+	rgbtrie := &RGBtrie{
 		Root: &node{isExtend: false, isLeaf: false, color: 0},
-		DB: *db,
+		DB:   *db,
 	}
 	return rgbtrie
 }
@@ -53,12 +53,12 @@ func (t *RGBtrie) putDb(db leveldb.DB) {
 }
 
 func (t *RGBtrie) PutRootHash() {
-	if t.Root != nil  {
+	if t.Root != nil {
 		t.RootHash = t.Root.hash
 	}
 }
 
-func (t *RGBtrie) tripleInsert(item tripleItem)  {
+func (t *RGBtrie) tripleInsert(item tripleItem) {
 	sub := item.Triple.subjectHash
 	pre := item.Triple.predictHash
 	obj := item.Triple.objectHash
@@ -86,7 +86,7 @@ func (t *RGBtrie) rootInsert(word []byte, item tripleItem, color int8) {
 	t.Root.updateHash(t.DB)
 }
 
-func (node1 *node) nodeInsert (word []byte, item tripleItem, color int8, db leveldb.DB) {
+func (node1 *node) nodeInsert(word []byte, item tripleItem, color int8, db leveldb.DB) {
 	lenOfWord := len(word)
 	lenOfKey := len(node1.key)
 	if lenOfKey == lenOfWord {
@@ -95,7 +95,7 @@ func (node1 *node) nodeInsert (word []byte, item tripleItem, color int8, db leve
 			if word[i] == node1.key[i] {
 				continue
 			} else {
-				node1.split(word, item, i - 1, color, db)
+				node1.split(word, item, i-1, color, db)
 				flag = false
 				break
 			}
@@ -118,22 +118,22 @@ func (node1 *node) nodeInsert (word []byte, item tripleItem, color int8, db leve
 			if word[i] == node1.key[i] {
 				continue
 			} else {
-				node1.split(word, item, i - 1, color, db)
+				node1.split(word, item, i-1, color, db)
 				flag = false
 				break
 			}
 		}
 		if flag {
-			node1.split(word, item, lenOfWord - 1, color, db)
+			node1.split(word, item, lenOfWord-1, color, db)
 		}
 	} else if lenOfKey < lenOfWord {
 		flag := 0
 		for i, _ := range node1.key {
 			if word[i] == node1.key[i] {
-				flag ++
+				flag++
 				continue
 			} else {
-				node1.split(word, item, i - 1, color, db)
+				node1.split(word, item, i-1, color, db)
 				flag = 0
 				break
 			}
@@ -141,21 +141,21 @@ func (node1 *node) nodeInsert (word []byte, item tripleItem, color int8, db leve
 		if flag > 0 {
 			flagRoot := true
 			for _, j := range node1.child {
-				if word[flag + 1] != j.key[0] {
+				if word[flag+1] != j.key[0] {
 					continue
 				} else {
-					j.nodeInsert(word[flag + 1 : lenOfWord], item, color, db)
+					j.nodeInsert(word[flag+1:lenOfWord], item, color, db)
 					flagRoot = false
 					break
 				}
 			}
 			if flagRoot {
-				node1.child = append(node1.child, &node{key: word[flag + 1 : lenOfWord], parent: node1, value: []tripleItem{item}})
+				node1.child = append(node1.child, &node{key: word[flag+1 : lenOfWord], parent: node1, value: []tripleItem{item}})
 			}
 			node1.updateColor(color)
 			node1.updateHash(db)
 		} else {
-			childNode := node{key: word[lenOfKey :], value: []tripleItem{item}, parent: node1, isLeaf: true, isExtend: false,color: color}
+			childNode := node{key: word[lenOfKey:], value: []tripleItem{item}, parent: node1, isLeaf: true, isExtend: false, color: color}
 			childNode.updateHash(db)
 			childNode.updateColor(color)
 			node1.child = append(node1.child, &childNode)
@@ -165,9 +165,9 @@ func (node1 *node) nodeInsert (word []byte, item tripleItem, color int8, db leve
 	}
 }
 
-func (node1 *node) split (word []byte, item tripleItem, lenOfSplit int, color int8, db leveldb.DB) {
-	if lenOfSplit + 1 == len(word) {
-		nodeNew := node{key: node1.key[lenOfSplit + 1 :], parent: node1, value: node1.value, isLeaf: node1.isLeaf,
+func (node1 *node) split(word []byte, item tripleItem, lenOfSplit int, color int8, db leveldb.DB) {
+	if lenOfSplit+1 == len(word) {
+		nodeNew := node{key: node1.key[lenOfSplit+1:], parent: node1, value: node1.value, isLeaf: node1.isLeaf,
 			isExtend: node1.isExtend, color: node1.color, child: node1.child}
 		node1.key = word
 		node1.child = []*node{&nodeNew}
@@ -175,11 +175,11 @@ func (node1 *node) split (word []byte, item tripleItem, lenOfSplit int, color in
 		node1.isExtend = true
 		node1.value = []tripleItem{item}
 	} else {
-		nodeNew1 := node{key: node1.key[lenOfSplit + 1 :], parent: node1, value: node1.value, isLeaf: node1.isLeaf,
+		nodeNew1 := node{key: node1.key[lenOfSplit+1:], parent: node1, value: node1.value, isLeaf: node1.isLeaf,
 			isExtend: node1.isExtend, color: node1.color, child: node1.child}
-		nodeNew2 := node{key: word[lenOfSplit + 1:], value: []tripleItem{item}, parent: node1, isLeaf: true,
+		nodeNew2 := node{key: word[lenOfSplit+1:], value: []tripleItem{item}, parent: node1, isLeaf: true,
 			isExtend: false, color: color}
-		node1.key = word[:lenOfSplit + 1]
+		node1.key = word[:lenOfSplit+1]
 		node1.child = []*node{&nodeNew1, &nodeNew2}
 		node1.isLeaf = false
 		node1.isExtend = false
@@ -192,7 +192,7 @@ func (node1 *node) split (word []byte, item tripleItem, lenOfSplit int, color in
 func (node1 *node) updateHash(db leveldb.DB) {
 	if len(node1.child) > 0 {
 		node1.childHash = nil
-		for _,j := range node1.child{
+		for _, j := range node1.child {
 			node1.childHash = append(node1.childHash, j.hash)
 		}
 	} else {
@@ -220,7 +220,7 @@ func (node1 *node) updateHash(db leveldb.DB) {
 	} else {
 		data, _ := rlp.EncodeToBytes(nodekv1)
 		for _, i := range node1.childHash {
-			for _, j := range i{
+			for _, j := range i {
 				data = append(data, j)
 			}
 		}
@@ -234,17 +234,18 @@ func (node1 *node) updateHash(db leveldb.DB) {
 		}
 	}
 }
+
 //1:s, 2:p, 4:o, 3:sp, 5:so, 6:po, 7:spo
 func (node1 *node) updateColor(color int8) {
 
-		if (node1.color == 1 || node1.color == 2 || node1.color == 4) && node1.color != color {
-			node1.color += color
-		} else if (node1.color == 3 && color == 4) || (node1.color == 5 && color == 2) || (node1.color == 6 && color == 1){
-			node1.color += color
-		}
-		if node1.parent != nil {
-			node1.parent.updateColor(color)
-		}
+	if (node1.color == 1 || node1.color == 2 || node1.color == 4) && node1.color != color {
+		node1.color += color
+	} else if (node1.color == 3 && color == 4) || (node1.color == 5 && color == 2) || (node1.color == 6 && color == 1) {
+		node1.color += color
+	}
+	if node1.parent != nil {
+		node1.parent.updateColor(color)
+	}
 }
 
 func (t *RGBtrie) printTrie() {
@@ -264,35 +265,46 @@ func (node1 *node) printNode() {
 		node1.isLeaf, " ", "isExtend: ", node1.isExtend, " ", "hash: ", node1.hash, " ")
 	fmt.Println()
 	if node1.isLeaf == false {
-		for _,j := range node1.child {
+		for _, j := range node1.child {
 			j.printNode()
 		}
 	}
 }
 
-func (t *RGBtrie) searchTrie(word []byte) []tripleItem {
-	for _, j := range t.Root.child {
-		if j.key[0] == word[0]{
-           return j.searchNode(word)
+func (t *RGBtrie) searchTrie(word []byte) (proof, *node) {
+	prf := proof{result: nil, merkleProof: nil}
+	flag := -1
+	var levelProof [][32]byte
+	for i, j := range t.Root.child {
+		if j.key[0] != word[0] {
+			levelProof = append(levelProof, j.hash)
+		}
+		if j.key[0] == word[0] {
+			flag = i
 		}
 	}
-	return []tripleItem{}
+	if flag != -1 {
+		prf.merkleProof = append(prf.merkleProof, levelProof)
+		return t.Root.child[flag].searchNode(word, prf)
+	}
+	return prf, nil
 }
 
-func (node1 *node) searchNode(word []byte, prf proof) (result proof) {
+func (node1 *node) searchNode(word []byte, prf proof) (proof, *node) {
 	if node1.isLeaf {
 		if len(node1.key) != len(word) {
-			return proof{}
+			return prf, nil
 		} else {
 			for i, j := range node1.key {
 				if word[i] == j {
 					continue
 				} else {
-					return proof{}
+					return prf, nil
 				}
 			}
 			prf.result = node1.value
-			return prf
+			prf.merkleProof = append(prf.merkleProof, [][32]byte{node1.hash})
+			return prf, node1
 		}
 	} else if node1.isExtend {
 		if len(node1.key) == len(word) {
@@ -300,51 +312,73 @@ func (node1 *node) searchNode(word []byte, prf proof) (result proof) {
 				if word[i] == j {
 					continue
 				} else {
-					return []tripleItem{}
+					return prf, nil
 				}
 			}
-			return node1.value
+			prf.result = node1.value
+			prf.merkleProof = append(prf.merkleProof, [][32]byte{node1.hash})
+			return prf, node1
 		} else if len(node1.key) < len(word) {
+			flag := -1
+			var levelProof [][32]byte
 			for i, j := range node1.key {
 				if word[i] == j {
 					continue
 				} else {
-					return []tripleItem{}
+					return prf, nil
 				}
 			}
-			for _, q := range node1.child {
-				if word[len(node1.key)] == q.key[0]{
-					return q.searchNode(word[len(node1.key) :])
+			for p, q := range node1.child {
+				if word[len(node1.key)] != q.key[0] {
+					levelProof = append(levelProof, q.hash)
+				}
+				if word[len(node1.key)] == q.key[0] {
+					flag = p
 				}
 			}
-			return []tripleItem{}
+			if flag != -1 {
+				prf.merkleProof = append(prf.merkleProof, levelProof)
+				return node1.child[flag].searchNode(word[len(node1.key):], prf)
+			}
+			return prf, nil
 		}
 	} else {
 		if len(node1.key) < len(word) {
+			flag := -1
+			var levelProof [][32]byte
 			for i, j := range node1.key {
 				if word[i] == j {
 					continue
 				} else {
-					return []tripleItem{}
+					return prf, nil
 				}
 			}
-			for _, q := range node1.child {
-				if word[len(node1.key)] == q.key[0]{
-					return q.searchNode(word[len(node1.key) :])
+			for p, q := range node1.child {
+				if word[len(node1.key)] != q.key[0] {
+					levelProof = append(levelProof, q.hash)
+				}
+				if word[len(node1.key)] == q.key[0] {
+					flag = p
 				}
 			}
-			return []tripleItem{}
+			if flag != -1 {
+				prf.merkleProof = append(prf.merkleProof, levelProof)
+				return node1.child[flag].searchNode(word[len(node1.key):], prf)
+			}
+			return prf, nil
 		}
 	}
-	return []tripleItem{}
+	return prf, nil
 }
 
-func (t *RGBtrie) getProof() {
-
+func (t *RGBtrie) verifyProof(prf proof, node1 *node) bool {
+	var tempTrie RGBtrie
+	tempTrie = *t
+	if prf.result != nil {
+		node1.updateHash(t.DB)
+		if tempTrie.RootHash == t.RootHash {
+			return true
+		}
+	}
+	return false
 }
-
-func (t *RGBtrie) verifyProof() {
-
-}
-
-
