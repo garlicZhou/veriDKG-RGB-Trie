@@ -12,6 +12,33 @@ import (
 	"time"
 )
 
+func TestInsert(t *testing.T) {
+	//數據庫操作
+	db, err := leveldb.OpenFile("./db", nil)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	//創建Trie
+	rgbtrie := newTrie(db)
+	//三元組處理
+	tripleNew := triple{subject: []byte("1"), predict: []byte("2"), object: []byte("3")}
+	tripleNew.Hash()
+	tp := tripleItem{Triple: tripleNew, Address: [32]byte{}}
+	//三元組插入
+	rgbtrie.tripleInsert(tp)
+	//打印Trie
+	rgbtrie.printTrie()
+	//fmt.Println(rgbtrie.Root.hash)
+	hash := [32]byte{200, 47, 93, 118, 40, 227, 190, 231, 249, 83, 101, 125, 11, 244, 189, 157, 254, 206, 4, 38, 3, 202, 233, 4, 176, 253, 16, 168, 109, 154, 96, 196}
+	rgbtrie.Root.hash = hash
+	//从数据库中重构RGBTrie
+	rgbtrie.Root.reNewNode(db)
+	rgbtrie.printTrie()
+
+}
+
 func TestStorage(t *testing.T) {
 	db, err := leveldb.OpenFile("./db", nil)
 	if err != nil {
@@ -22,7 +49,7 @@ func TestStorage(t *testing.T) {
 
 	rgbtrie := newTrie(db)
 
-	fi, err := os.Open("C:\\Users\\21038299r\\Desktop\\COMP\\my paper\\SIGIR\\experiment\\1.txt")
+	fi, err := os.Open("C:\\Users\\21038299r\\OneDrive - The Hong Kong Polytechnic University\\Desktop\\SIGIR\\experiment\\experiment\\1.txt")
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
 		return
@@ -47,30 +74,10 @@ func TestStorage(t *testing.T) {
 		tripleNew.Hash()
 		t := tripleItem{Triple: tripleNew, Address: [32]byte{}}
 		fmt.Println(string(t.Triple.object))
-		//t.Triple.print()
 		rgbtrie.tripleInsert(t)
-		//fmt.Println("insert successful")
 		fmt.Println(i)
-		//rgbtrie.printTrie()
-
-		//fmt.Println(string(a))
-		//t := triple{subject: string(a)}
-		//tp := tripleItem{Triple: &t, Address: string(a)}
-		//hash := sha256.Sum256(a)
-		//fmt.Println(hash)
-		//fmt.Println(i)
-		//db_hash := hash[:]
-		//rgbtrie.Root.wordInsert(db_hash, tp,0, *db)
-		//
-		//x := i
-		//
-		//bytesBuffer := bytes.NewBuffer([]byte{})
-		//binary.Write(bytesBuffer, binary.BigEndian, x)
-		//db.Put(bytesBuffer.Bytes(), a,nil)
 	}
-
-	//rgbtrie.rootInsert()
-	//rgbtrie_data,_ := rlp.EncodeToBytes(rgbtrie)
+	rgbtrie.printTrie()
 	fmt.Println(rgbtrie.Root.child)
 	fmt.Println(len(rgbtrie.Root.child))
 	str := "http://dbpedia.org/ontology/Band"
@@ -87,21 +94,7 @@ func TestStorage(t *testing.T) {
 	fmt.Println("Query time:", elapsed.Nanoseconds())
 
 	fmt.Println("the result of veriy:", rgbtrie.verifyProof(p, q))
-	//db.Put(rgbtrie.RootHash, rgbtrie_data,nil)
 
-	/*db.Put([]byte("key1"), []byte("value1"), nil)
-	db.Put([]byte("key2"), []byte("value2"), nil)
-	db.Put([]byte("key3"), []byte("value3"), nil)
-	db.Put([]byte("key4"), []byte("value4"), nil)
-	db.Put([]byte("key5"), []byte("value5"), nil)
-	db.Put([]byte("food"), []byte("good"), nil)
-
-	//循环遍历数据
-	fmt.Println("循环遍历数据")
-	iter := db.NewIterator(nil, nil)
-	for iter.Next() {
-		fmt.Printf("key:%s, value:%s\n", iter.Key(), iter.Value())
-	}
-	iter.Release()*/
+	fmt.Println("size of trie:", rgbtrie.getSizeOfTrie())
 
 }
