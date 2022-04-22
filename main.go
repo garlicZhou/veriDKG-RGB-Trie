@@ -1,0 +1,5 @@
+package RGBtrie
+
+func main() {
+
+}
