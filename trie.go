@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/syndtr/goleveldb/leveldb"
+	"unsafe"
 )
 
 type node struct {
@@ -32,7 +33,7 @@ type nodekv struct {
 type RGBtrie struct {
 	Root     *node
 	RootHash [32]byte
-	DB       leveldb.DB
+	DB       *leveldb.DB
 }
 
 type proof struct {
@@ -43,12 +44,12 @@ type proof struct {
 func newTrie(db *leveldb.DB) *RGBtrie {
 	rgbtrie := &RGBtrie{
 		Root: &node{isExtend: false, isLeaf: false, color: 0},
-		DB:   *db,
+		DB:   db,
 	}
 	return rgbtrie
 }
 
-func (t *RGBtrie) putDb(db leveldb.DB) {
+func (t *RGBtrie) putDb(db *leveldb.DB) {
 	t.DB = db
 }
 
@@ -79,14 +80,17 @@ func (t *RGBtrie) rootInsert(word []byte, item tripleItem, color int8) {
 		}
 	}
 	if flagRoot {
-		t.Root.child = append(t.Root.child, &node{key: word, parent: t.Root, value: []tripleItem{item}, isLeaf: true})
+		childNode := node{key: word, parent: t.Root, value: []tripleItem{item}, color: color, isLeaf: true}
+		childNode.updateHash(t.DB)
+		childNode.updateColor(color)
+		t.Root.child = append(t.Root.child, &childNode)
 		t.Root.updateColor(color)
 	}
 	t.Root.updateColor(color)
 	t.Root.updateHash(t.DB)
 }
 
-func (node1 *node) nodeInsert(word []byte, item tripleItem, color int8, db leveldb.DB) {
+func (node1 *node) nodeInsert(word []byte, item tripleItem, color int8, db *leveldb.DB) {
 	lenOfWord := len(word)
 	lenOfKey := len(node1.key)
 	if lenOfKey == lenOfWord {
@@ -165,7 +169,7 @@ func (node1 *node) nodeInsert(word []byte, item tripleItem, color int8, db level
 	}
 }
 
-func (node1 *node) split(word []byte, item tripleItem, lenOfSplit int, color int8, db leveldb.DB) {
+func (node1 *node) split(word []byte, item tripleItem, lenOfSplit int, color int8, db *leveldb.DB) {
 	if lenOfSplit+1 == len(word) {
 		nodeNew := node{key: node1.key[lenOfSplit+1:], parent: node1, value: node1.value, isLeaf: node1.isLeaf,
 			isExtend: node1.isExtend, color: node1.color, child: node1.child}
@@ -189,7 +193,7 @@ func (node1 *node) split(word []byte, item tripleItem, lenOfSplit int, color int
 	node1.updateHash(db)
 }
 
-func (node1 *node) updateHash(db leveldb.DB) {
+func (node1 *node) updateHash(db *leveldb.DB) {
 	if len(node1.child) > 0 {
 		node1.childHash = nil
 		for _, j := range node1.child {
@@ -226,6 +230,7 @@ func (node1 *node) updateHash(db leveldb.DB) {
 		}
 		node1.hash = sha256.Sum256(data)
 		hash := node1.hash[:]
+
 		db.Put(hash, data, nil)
 		if node1.parent == nil {
 			return
@@ -261,7 +266,7 @@ func (node1 *node) printNode() {
 	}
 
 	//str := node1.hash[:]
-	fmt.Print(" ", "keys:", node1.key, " ", "value:", node1.value, " ", "isLeaf: ",
+	fmt.Print(" ", "child:", node1.child, "keys:", node1.key, " ", "value:", node1.value, " ", "isLeaf: ",
 		node1.isLeaf, " ", "isExtend: ", node1.isExtend, " ", "hash: ", node1.hash, " ")
 	fmt.Println()
 	if node1.isLeaf == false {
@@ -381,4 +386,40 @@ func (t *RGBtrie) verifyProof(prf proof, node1 *node) bool {
 		}
 	}
 	return false
+}
+
+func (t *RGBtrie) getSizeOfTrie() uintptr {
+	return t.Root.getSizeOfNode()
+}
+
+func (node *node) getSizeOfNode() uintptr {
+	sum := unsafe.Sizeof(node.child)
+	if node.child != nil {
+		for _, j := range node.child {
+			sum += j.getSizeOfNode()
+		}
+	}
+	return sum
+}
+
+func (node1 *node) reNewNode(db *leveldb.DB) {
+	nodekv1 := nodekv{}
+	data1, _ := db.Get(node1.hash[:], nil)
+	err := rlp.DecodeBytes(data1, &nodekv1)
+	if err != nil {
+		fmt.Println(err)
+	}
+	node1.childHash = nodekv1.ChildHash
+	node1.key = nodekv1.Key
+	node1.value = nodekv1.Value
+	node1.isLeaf = nodekv1.IsLeaf
+	node1.isExtend = nodekv1.IsExtend
+	node1.color = nodekv1.color
+	if len(node1.childHash) == 0 {
+		return
+	}
+	for i := range node1.childHash {
+		node1.child = append(node1.child, &node{parent: node1, hash: node1.childHash[i]})
+		node1.child[i].reNewNode(db)
+	}
 }
