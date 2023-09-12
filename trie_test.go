@@ -49,7 +49,7 @@ func TestStorage(t *testing.T) {
 
 	rgbtrie := newTrie(db)
 
-	fi, err := os.Open("C:\\Users\\21038299r\\OneDrive - The Hong Kong Polytechnic University\\Desktop\\SIGIR\\experiment\\experiment\\1.txt")
+	fi, err := os.Open("1.txt")
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
 		return
