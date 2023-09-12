@@ -3,7 +3,7 @@
 This project is a go-language implementation of VeriDKG's core module, RGB-Trie.
 
 To test the performance of RGB-Trie in real blockchain scenarios, please replace the trie.go file in the ETHMST project with the trie.go file in this project for testing, the ETHMST repository address is: 
-[ETHMST](https://github.com/garlicZhou/ETHMS)
+[ETHMST](https://github.com/garlicZhou/ETHMST)
 
 Task: 测试加入RGB-Trie对以太坊的成本增加
 
